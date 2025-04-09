@@ -21,11 +21,11 @@ class _frnn_grid_points(Function):
 
     @staticmethod
     def forward(ctx,
-                points1,
-                points2,
-                lengths1,
-                lengths2,
-                K: int,
+                points1, # points to search for neighbors
+                points2, # points to search in 
+                lengths1, # lengths of points1
+                lengths2, # lengths of points2
+                K: int, 
                 r: torch.Tensor,
                 sorted_points2=None,
                 pc2_grid_off=None,
@@ -36,12 +36,14 @@ class _frnn_grid_points(Function):
         """
         TODO: add docs
         """
+        
+        # TODO: Check this optimization
         use_cached_grid = (sorted_points2 is not None and
                            pc2_grid_off is not None and
                            sorted_points2_idxs is not None and
                            grid_params_cuda is not None)
-        N = points1.shape[0]
-        D = points1.shape[2]
+        N = points1.shape[0] # This is the number of point clouds
+        D = points1.shape[2] # This is the dimension of the points
         # assert D == 2 or D == 3, "For now only 2D/3D is supported"
         # assert D >= 2 and D <= 32
         # setup grid params
@@ -87,6 +89,7 @@ class _frnn_grid_points(Function):
                     G = int(grid_params_cuda[i, grid_total_idx].item())
 
             # insert points into the grid
+            # Point injections
             P2 = points2.shape[1]
             pc2_grid_cnt = torch.zeros((N, G),
                                        dtype=torch.int,

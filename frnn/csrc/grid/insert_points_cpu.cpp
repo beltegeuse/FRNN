@@ -21,17 +21,18 @@ void InsertPointsCPU(const at::Tensor points, const at::Tensor lengths,
   auto grid_idx_a = grid_idx.accessor<int, 2>();
 
   int gs;
-  int3 gc;
+  int3 gc; // TODO: Check this -- because 0 for now -- maybe for return a value
   int N = points.size(0);
   for (int n = 0; n < N; ++n) {
     for (int p = 0; p < lengths_a[n]; ++p) {
       gs = GetGridCell(points_a[n][p][0], points_a[n][p][1], points_a[n][p][2],
                        gc, params[n]);
+      // Seems to build an adjacency list
       grid_cell_a[n][p] = gs;
       grid_next_a[n][p] = grid_a[n][gs];
       grid_idx_a[n][p] = grid_cnt_a[n][gs];
       grid_a[n][gs] = p;
-      grid_cnt_a[n][gs]++;
+      grid_cnt_a[n][gs]++; // Counter
     }
   }
 }
