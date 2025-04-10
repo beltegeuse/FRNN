@@ -842,11 +842,11 @@ def frnn_grid_resampling(
         r = r.cuda()
 
     if grid is not None:
-        idxs, dists, sorted_points2, pc2_grid_off, sorted_points2_idxs, grid_params_cuda = _frnn_grid_resampling.apply(
+        idxs, count, sorted_points2, pc2_grid_off, sorted_points2_idxs, grid_params_cuda = _frnn_grid_resampling.apply(
             points1, points2, lengths1, lengths2, K, r, grid[0], grid[1],
             grid[2], grid[3], return_sorted, radius_cell_ratio)
     else:
-        idxs, dists, sorted_points2, pc2_grid_off, sorted_points2_idxs, grid_params_cuda = _frnn_grid_resampling.apply(
+        idxs, count, sorted_points2, pc2_grid_off, sorted_points2_idxs, grid_params_cuda = _frnn_grid_resampling.apply(
             points1, points2, lengths1, lengths2, K, r, None, None, None, None,
             return_sorted, radius_cell_ratio)
 
@@ -858,4 +858,4 @@ def frnn_grid_resampling(
 
     # follow pytorch3d.ops.knn_points' conventions to return dists frist
     # TODO: also change this in the c++/cuda code?
-    return dists, idxs, grid
+    return idxs, count, grid
