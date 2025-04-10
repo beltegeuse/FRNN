@@ -218,7 +218,6 @@ def frnn_grid_points(
     K: int = -1,
     r: Union[float, torch.Tensor] = -1,
     grid: Union[_GRID, None] = None,
-    return_nn: bool = False,
     # TODO: add non-sorted version?
     # for now we always sort the neighbors by dist
     return_sorted: bool = True,
@@ -247,7 +246,6 @@ def frnn_grid_points(
     grid: A tuple of tensors consisting of cached grid structure. 
           If the points2 have been used as reference points before,
           we can reuse the constructed grid to avoid building it for a second time
-    return_nn: If set to True returns the nearest neighbors in points2 for each point in points1.
     return_sorted: (bool) whether to return the nearest neighbors sorted in ascending order of distance. 
                    For now this function always return sorted nn no matter the value of this flag.
     radius_cell_ratio: A hyperparameter for grid cell size. Users can just use the defualt value 2.
@@ -341,13 +339,9 @@ def frnn_grid_points(
         sorted_points2_idxs=sorted_points2_idxs,  # (N, P)
         grid_params=grid_params_cuda)  # (N, 6) or (N, 8)
 
-    points2_nn = None
-    if return_nn:
-        points2_nn = frnn_gather(points2, idxs, lengths2)
-
     # follow pytorch3d.ops.knn_points' conventions to return dists frist
     # TODO: also change this in the c++/cuda code?
-    return dists, idxs, points2_nn, grid
+    return dists, idxs, grid
 
 
 # TODO: probably do this in cuda?
@@ -429,8 +423,7 @@ def frnn_bf_points(points1,
                    lengths1: Union[torch.Tensor, None] = None,
                    lengths2: Union[torch.Tensor, None] = None,
                    K: int = -1,
-                   r: Union[float, torch.Tensor] = -1,
-                   return_nn: bool =False) :
+                   r: Union[float, torch.Tensor] = -1) :
     if points1.shape[0] != points2.shape[0]:
         raise ValueError(
             "points1 and points2 must have the same batch  dimension")
@@ -465,9 +458,6 @@ def frnn_bf_points(points1,
     
     idxs, dists = _frnn_bf_points.apply(points1, points2, lengths1, lengths2,
                                         K, r)
-    points2_nn = None
-    if return_nn:
-        points2_nn = frnn_gather(points2, idxs, lengths2)
     return idxs, dists, points2_nn
 
 class _frnn_bf_resampling(Function):
@@ -500,7 +490,6 @@ def frnn_bf_resampling(points1,
                    lengths2: Union[torch.Tensor, None] = None,
                    K: int = -1,
                    r: Union[float, torch.Tensor] = -1,
-                   return_nn: bool =False,
                    seed: int = 0) :
     if points1.shape[0] != points2.shape[0]:
         raise ValueError(
@@ -536,10 +525,7 @@ def frnn_bf_resampling(points1,
     
     idxs, count = _frnn_bf_resampling.apply(points1, points2, lengths1, lengths2,
                                             K, r, seed)
-    points2_nn = None
-    if return_nn:
-        points2_nn = frnn_gather(points2, idxs, lengths2)
-    return idxs, count, points2_nn
+    return idxs, count
 
 
 class _frnn_grid_resampling(Function):
@@ -747,7 +733,6 @@ def frnn_grid_resampling(
     K: int = -1,
     r: Union[float, torch.Tensor] = -1,
     grid: Union[_GRID, None] = None,
-    return_nn: bool = False,
     # TODO: add non-sorted version?
     # for now we always sort the neighbors by dist
     return_sorted: bool = True,
@@ -871,10 +856,6 @@ def frnn_grid_resampling(
         sorted_points2_idxs=sorted_points2_idxs,  # (N, P)
         grid_params=grid_params_cuda)  # (N, 6) or (N, 8)
 
-    points2_nn = None
-    if return_nn:
-        points2_nn = frnn_gather(points2, idxs, lengths2)
-
     # follow pytorch3d.ops.knn_points' conventions to return dists frist
     # TODO: also change this in the c++/cuda code?
-    return dists, idxs, points2_nn, grid
+    return dists, idxs, grid
