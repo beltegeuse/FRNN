@@ -194,10 +194,9 @@ __global__ void FRNNBruteForceResamplingKernel(const scalar_t *__restrict__ poin
     for (int d = 0; d < D; ++d) {
       cur_point[d] = points1[n * P1 * D + p1 * D + d];
     }
-    cur_count = 0;
     
     // Reservoir sampling
-    int pushed = 0;
+    int cur_count = 0;
 
     // Go through all the second array
     int length2 = lengths2[n];
@@ -215,30 +214,26 @@ __global__ void FRNNBruteForceResamplingKernel(const scalar_t *__restrict__ poin
       if (dist >= r2) continue;
       
       // Simple reservoir sampling
-      if(pushed < K) {
+      if(cur_count < K) {
         // Add to the list
-        min_idxs[pushed] = p2;
-        pushed++;
+        min_idxs[cur_count] = p2;
+        cur_count++;
       } else {
         // Reservoir sampling
-        pushed++; // Increment the number of pushed points
-        int r = curand(&state) % pushed;
+        cur_count++; // Increment the number of pushed points
+        int r = curand(&state) % cur_count;
         if (r < K) {
           min_idxs[r] = p2;
         }
       }
-      cur_count++;
-    }
-
-    if(pushed > K) {
-      pushed = K;
     }
 
     count[n * P1 + p1] = cur_count;
-    for (int k = 0; k < pushed; ++k) {
-      // if (min_dists[k] >= r2)
-      //   break;
+    if(cur_count > K) {
+      cur_count = K;
+    }
 
+    for (int k = 0; k < cur_count; ++k) {
       // Copy all values
       idxs[n * P1 * K + p1 * K + k] = min_idxs[k];
     }
