@@ -8,6 +8,8 @@
 #include "utils/dispatch.cuh"
 #include "utils/mink.cuh"
 
+// D: dimension
+// K: number of neighbors
 template <typename scalar_t, int64_t D, int64_t K>
 __global__ void FRNNBruteForceKernel(const scalar_t *__restrict__ points1,
                                      const scalar_t *__restrict__ points2,
@@ -16,35 +18,55 @@ __global__ void FRNNBruteForceKernel(const scalar_t *__restrict__ points1,
                                      scalar_t *__restrict__ dists,
                                      int64_t *__restrict__ idxs, int N, int P1,
                                      int P2, float r2) {
+  // The point we consider
   scalar_t cur_point[D];
+  // The points founds (K)
   scalar_t min_dists[K];
   int min_idxs[K];
+  // Check for different chuncking
   int chunks_per_cloud = (1 + (P1 - 1) / blockDim.x);
   int chunks_to_do = N * chunks_per_cloud;
   for (int chunk = blockIdx.x; chunk < chunks_to_do; chunk += gridDim.x) {
+    // Index of the point cloud
     int n = chunk / chunks_per_cloud;
+    // Get where to start the point cloud
     int start_point = blockDim.x * (chunk % chunks_per_cloud);
+
+    // The current points we consider
     int p1 = start_point + threadIdx.x;
     if (p1 >= lengths1[n]) continue;
     for (int d = 0; d < D; ++d) {
       cur_point[d] = points1[n * P1 * D + p1 * D + d];
     }
+
+    // Go through all the second array
     int length2 = lengths2[n];
     MinK<scalar_t, int> mink(min_dists, min_idxs, K);
     for (int p2 = 0; p2 < length2; ++p2) {
+      
+      // Distance squared
       scalar_t dist = 0;
       for (int d = 0; d < D; ++d) {
         int offset = n * P2 * D + p2 * D + d;
         scalar_t diff = cur_point[d] - points2[offset];
         dist += diff * diff;
       }
+      
+      // If outside, quit
       if (dist >= r2) continue;
+      // Otherwise, add
       mink.add(dist, p2);
+
     }
+
+    // Sort by distance
     mink.sort();
+
     for (int k = 0; k < mink.size(); ++k) {
       // if (min_dists[k] >= r2)
       //   break;
+
+      // Copy all values
       idxs[n * P1 * K + p1 * K + k] = min_idxs[k];
       dists[n * P1 * K + p1 * K + k] = min_dists[k];
     }
@@ -66,14 +88,19 @@ struct FRNNBruteForceFunctor {
   }
 };
 
+// Up to 8 dim
 constexpr int V2_MIN_D = 1;
 constexpr int V2_MAX_D = 8;
+// Up to 64 neighbors
 constexpr int V2_MIN_K = 1;
 constexpr int V2_MAX_K = 64;
 
 std::tuple<at::Tensor, at::Tensor> FRNNBruteForceCUDA(
-    const at::Tensor &p1, const at::Tensor &p2, const at::Tensor &lengths1,
-    const at::Tensor &lengths2, int K, float r) {
+    const at::Tensor &p1, const at::Tensor &p2, 
+    const at::Tensor &lengths1,
+    const at::Tensor &lengths2, 
+    int K, 
+    float r) {
   // Check inputs are on the same device
   at::TensorArg p1_t{p1, "p1", 1}, p2_t{p2, "p2", 2},
       lengths1_t{lengths1, "lengths1", 3}, lengths2_t{lengths2, "lengths2", 4};

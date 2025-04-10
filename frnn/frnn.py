@@ -426,11 +426,43 @@ class _frnn_bf_points(Function):
 
 def frnn_bf_points(points1,
                    points2,
-                   lengths1,
-                   lengths2,
-                   K,
-                   r,
-                   return_nn=False):
+                   lengths1: Union[torch.Tensor, None] = None,
+                   lengths2: Union[torch.Tensor, None] = None,
+                   K: int = -1,
+                   r: Union[float, torch.Tensor] = -1,
+                   return_nn: bool =False) :
+    if points1.shape[0] != points2.shape[0]:
+        raise ValueError(
+            "points1 and points2 must have the same batch  dimension")
+    if points1.shape[2] != points2.shape[2]:
+        raise ValueError(
+            f"dimension mismatch: points1 of dimension {points1.shape[2]} while points2 of dimension {points2.shape[2]}"
+        )
+    # if points1.shape[2] != 2 and points1.shape[2] != 3:
+    #     raise ValueError("for now only grid in 2D/3D is supported")
+    # if points1.shape[2] < 2 or points1.shape[2] > 32:
+    #     raise ValueError(
+    #         "for now only point clouds of dimension 2-32 is supported")
+    if not points1.is_cuda or not points2.is_cuda:
+        raise TypeError("for now only cuda version is supported")
+
+    points1 = points1.contiguous()
+    points2 = points2.contiguous()
+
+    P1 = points1.shape[1]
+    P2 = points2.shape[1]
+
+    if lengths1 is None:
+        lengths1 = torch.full((points1.shape[0],),
+                              P1,
+                              dtype=torch.long,
+                              device=points1.device)
+    if lengths2 is None:
+        lengths2 = torch.full((points2.shape[0],),
+                              P2,
+                              dtype=torch.long,
+                              device=points2.device)
+    
     idxs, dists = _frnn_bf_points.apply(points1, points2, lengths1, lengths2,
                                         K, r)
     points2_nn = None
