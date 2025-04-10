@@ -20,8 +20,12 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("find_nbrs_cpu", &FindNbrsCPU);
   m.def("test_find_nbrs_cpu", &TestFindNbrsCPU);
 
+  // Brute force
   m.def("frnn_bf_cuda", &FRNNBruteForceCUDA);
   m.def("frnn_bf_cpu", &FRNNBruteForceCPU);
+
+  // Brute force resampling
+  m.def("frnn_bf_resampling_cuda", &FRNNBruteForceResamplingCUDA);
 
   m.def("frnn_backward_cuda", &FRNNBackwardCUDA);
 }

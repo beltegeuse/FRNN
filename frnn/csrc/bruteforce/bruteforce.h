@@ -7,6 +7,12 @@ FRNNBruteForceCUDA(const at::Tensor &p1, const at::Tensor &p2,
                    const at::Tensor &lengths1, const at::Tensor &lengths2,
                    int K, float r);
 
+std::tuple<at::Tensor, at::Tensor>
+FRNNBruteForceResamplingCUDA(const at::Tensor &p1, const at::Tensor &p2,
+                    const at::Tensor &lengths1, const at::Tensor &lengths2,
+                    int K, float r, unsigned long long seed);
+                   
+
 /* fixed radius nearest neighbor search on CPU using brute force O(n^2) method
  * used as baseline & ground truth. based on pytorch3d KNearestNeighborIdxCpu */
 std::tuple<at::Tensor, at::Tensor> FRNNBruteForceCPU(const at::Tensor &p1,

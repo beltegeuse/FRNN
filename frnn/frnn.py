@@ -469,3 +469,74 @@ def frnn_bf_points(points1,
     if return_nn:
         points2_nn = frnn_gather(points2, idxs, lengths2)
     return idxs, dists, points2_nn
+
+class _frnn_bf_resampling(Function):
+    """
+    Torch autograd Functio wrapper for FRNN CUDA brute force implementation
+    (validation only)
+    """
+
+    @staticmethod
+    def forward(ctx, points1, points2, lengths1, lengths2, K, r, seed):
+        idxs, count = _C.frnn_bf_resampling_cuda(points1, points2, 
+                                                 lengths1, lengths2, 
+                                                 K, r, seed)
+
+        ctx.save_for_backward(points1, points2, lengths1, lengths2, idxs)
+        ctx.mark_non_differentiable(idxs)
+
+        return idxs, count
+
+    @staticmethod
+    def backward(ctx, grad_idxs, grad_dists):
+        points1, points2, lengths1, lengths2, idxs = ctx.saved_tensors
+        grad_points1, grad_points2 = _C.frnn_backward_cuda(
+            points1, points2, lengths1, lengths2, idxs, grad_dists)
+        return grad_points1, grad_points2, None, None, None, None
+    
+def frnn_bf_resampling(points1,
+                   points2,
+                   lengths1: Union[torch.Tensor, None] = None,
+                   lengths2: Union[torch.Tensor, None] = None,
+                   K: int = -1,
+                   r: Union[float, torch.Tensor] = -1,
+                   return_nn: bool =False,
+                   seed: int = 0) :
+    if points1.shape[0] != points2.shape[0]:
+        raise ValueError(
+            "points1 and points2 must have the same batch  dimension")
+    if points1.shape[2] != points2.shape[2]:
+        raise ValueError(
+            f"dimension mismatch: points1 of dimension {points1.shape[2]} while points2 of dimension {points2.shape[2]}"
+        )
+    # if points1.shape[2] != 2 and points1.shape[2] != 3:
+    #     raise ValueError("for now only grid in 2D/3D is supported")
+    # if points1.shape[2] < 2 or points1.shape[2] > 32:
+    #     raise ValueError(
+    #         "for now only point clouds of dimension 2-32 is supported")
+    if not points1.is_cuda or not points2.is_cuda:
+        raise TypeError("for now only cuda version is supported")
+
+    points1 = points1.contiguous()
+    points2 = points2.contiguous()
+
+    P1 = points1.shape[1]
+    P2 = points2.shape[1]
+
+    if lengths1 is None:
+        lengths1 = torch.full((points1.shape[0],),
+                              P1,
+                              dtype=torch.long,
+                              device=points1.device)
+    if lengths2 is None:
+        lengths2 = torch.full((points2.shape[0],),
+                              P2,
+                              dtype=torch.long,
+                              device=points2.device)
+    
+    idxs, count = _frnn_bf_resampling.apply(points1, points2, lengths1, lengths2,
+                                            K, r, seed)
+    points2_nn = None
+    if return_nn:
+        points2_nn = frnn_gather(points2, idxs, lengths2)
+    return idxs, count, points2_nn
