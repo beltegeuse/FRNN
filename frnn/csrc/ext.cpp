@@ -6,6 +6,7 @@
 #include "grid/find_nbrs.h"
 #include "grid/grid.h"
 #include "grid/insert_points.h"
+#include "grid/find_nbrs_resampling.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("setup_grid_params", &SetupGridParams);
@@ -19,6 +20,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("find_nbrs_cuda", &FindNbrsCUDA);
   m.def("find_nbrs_cpu", &FindNbrsCPU);
   m.def("test_find_nbrs_cpu", &TestFindNbrsCPU);
+
+  // Find nbrs with resampling
+  m.def("find_nbrs_resampling_cuda", &FindNbrsResamplingCUDA);
 
   // Brute force
   m.def("frnn_bf_cuda", &FRNNBruteForceCUDA);
