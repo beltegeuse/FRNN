@@ -6,7 +6,9 @@
 #include "grid/find_nbrs.h"
 #include "grid/grid.h"
 #include "grid/insert_points.h"
+// Resampling
 #include "grid/find_nbrs_resampling.h"
+#include "bruteforce/bruteforce_resampling.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("setup_grid_params", &SetupGridParams);
